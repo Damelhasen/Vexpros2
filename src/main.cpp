@@ -1,5 +1,6 @@
 #include "main.h"
 #include "lemlib/api.hpp"
+#include <cerrno>
 
 // left motor group
 pros::MotorGroup left_motor_group({1, 11}, pros::MotorGears::blue);
@@ -65,56 +66,43 @@ lemlib::Chassis chassis(drivetrain, // drivetrain settings
 
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
+void printTelemetry() {
+    const lemlib::Pose pose = chassis.getPose();
+
+    errno = 0;
+    const double imuHeading = imu.get_heading();
+    const int imuError = errno;
+
+    errno = 0;
+    const std::int32_t rotationPosition = odomEncoder.get_position();
+    const int rotationError = errno;
+
+    pros::lcd::print(0, "X: %f", pose.x);
+    pros::lcd::print(1, "Y: %f", pose.y);
+    pros::lcd::print(2, "Theta: %f", pose.theta);
+    pros::lcd::print(3, "IMU: %.2f Status:%d", imuHeading, static_cast<int>(imu.get_status()));
+    pros::lcd::print(4, "Rotation: %d", rotationPosition);
+    pros::lcd::print(5, "Errors IMU:%d Rot:%d", imuError, rotationError);
+}
+
 // initialize function. Runs on program startup
 void initialize() {
     pros::lcd::initialize(); // initialize brain screen
     chassis.calibrate(); // calibrate sensors
-    // print position to brain screen
-    pros::Task screen_task([&]() {
-        while (true) {
-            // print robot location to the brain screen
-            pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
-            pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
-            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-            // DEBUGGING: Check raw sensor readings if the chassis pose is NaN.
-            pros::lcd::print(3, "IMU: %.2f", imu.get_heading());
-            pros::lcd::print(4, "Rotation: %d", odomEncoder.get_position());
-            // delay to save resources
-            pros::delay(20);
-        }
-    });
 }
 
 void opcontrol() {
-    // loop forever
     while (true) {
-         // print robot location to the brain screen
-            pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
-            pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
-            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-            // delay to save resources
-            pros::delay(20);
-        // left stick Y controls forward/backward; right stick X controls turning
+        printTelemetry();
+
         int throttle = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
         int turn = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
-        
-        // move the robot
         chassis.arcade(-throttle, -turn);
-        
-        
+
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
-        //claw stuff
             claw.move(100);
+        }
 
-        // delay to save resources
-        pros::delay(25);
-
-        
+        pros::delay(20);
     }
-
-    
-    
-    
- 
-}
 }
