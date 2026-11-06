@@ -1,6 +1,5 @@
 #include "main.h"
 #include "lemlib/api.hpp"
-#include <cerrno>
 
 // left motor group
 pros::MotorGroup left_motor_group({1, 11}, pros::MotorGears::blue);
@@ -66,25 +65,6 @@ lemlib::Chassis chassis(drivetrain, // drivetrain settings
 
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
-void printTelemetry() {
-    const lemlib::Pose pose = chassis.getPose();
-
-    errno = 0;
-    const double imuHeading = imu.get_heading();
-    const int imuError = errno;
-
-    errno = 0;
-    const std::int32_t rotationPosition = odomEncoder.get_position();
-    const int rotationError = errno;
-
-    pros::lcd::print(0, "X: %f", pose.x);
-    pros::lcd::print(1, "Y: %f", pose.y);
-    pros::lcd::print(2, "Theta: %f", pose.theta);
-    pros::lcd::print(3, "IMU: %.2f Status:%d", imuHeading, static_cast<int>(imu.get_status()));
-    pros::lcd::print(4, "Rotation: %d", rotationPosition);
-    pros::lcd::print(5, "Errors IMU:%d Rot:%d", imuError, rotationError);
-}
-
 // initialize function. Runs on program startup
 void initialize() {
     pros::lcd::initialize(); // initialize brain screen
@@ -93,8 +73,6 @@ void initialize() {
 
 void opcontrol() {
     while (true) {
-        printTelemetry();
-
         int throttle = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
         int turn = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
         chassis.arcade(-throttle, -turn);
